@@ -60,9 +60,6 @@ enum layers {
 #define TB_SPC LT(_NUMBERS, KC_SPC)
 #define TB_BSPC LT(_FUNCTION, KC_BSPC)
 
-// POINTING DEVICE MAGIC
-#define PD_RCSCR LT(0, KC_BTN2)
-
 // vertical combos for umlauts
 const uint16_t PROGMEM ae_combo[] = {KC_Q, HM_A, COMBO_END};
 const uint16_t PROGMEM ss_combo[] = {KC_W, HM_S, COMBO_END};
@@ -87,6 +84,65 @@ combo_t key_combos[COMBO_COUNT] = {
     COMBO(esc_combo, KC_ESC)
 };
 
+// TAP DANCE JAZZ
+enum {
+  TD_BTN2,
+  TD_BTN3
+};
+
+void handle_tap_BTN2(tap_dance_state_t *state, void *user_data) {
+    switch (state->count) {
+        case 1:
+            tap_code16(KC_BTN2);
+            reset_tap_dance(state);
+            break;
+        case 2:
+            if (mab_get_pointer_sniping_enabled()) {
+              mab_set_pointer_sniping_enabled(false);
+              #ifdef QUANTUM_PAINTER_ENABLE
+                sniping_set_user(false);
+              #endif
+            }
+            mab_set_pointer_dragscroll_enabled(!mab_get_pointer_dragscroll_enabled());
+            #ifdef QUANTUM_PAINTER_ENABLE
+              dragscroll_set_user(mab_get_pointer_dragscroll_enabled());
+            #endif
+            reset_tap_dance(state);
+            break;
+        case 3:
+            if (mab_get_pointer_dragscroll_enabled()) {
+              mab_set_pointer_dragscroll_enabled(false);
+              #ifdef QUANTUM_PAINTER_ENABLE
+                dragscroll_set_user(false);
+              #endif
+            }
+            mab_set_pointer_sniping_enabled(!mab_get_pointer_sniping_enabled());
+            #ifdef QUANTUM_PAINTER_ENABLE
+              sniping_set_user(mab_get_pointer_sniping_enabled());
+            #endif
+            reset_tap_dance(state);
+            break;
+    }
+}
+
+void handle_tap_BTN3(tap_dance_state_t *state, void *user_data) {
+    switch (state->count) {
+        case 1:
+            tap_code16(KC_BTN3);
+            reset_tap_dance(state);
+            break;
+        case 2:
+            tap_code16(LALT(KC_LEFT));
+            reset_tap_dance(state);
+            break;
+    }
+}
+
+tap_dance_action_t tap_dance_actions[] = {
+    [TD_BTN2] = ACTION_TAP_DANCE_FN(handle_tap_BTN2),
+    [TD_BTN3] = ACTION_TAP_DANCE_FN(handle_tap_BTN3),
+};
+
 // KEYMAPS 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
@@ -95,7 +151,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_Q,     HM_A,     HM_S,     HM_D,     HM_F,     HM_G,                                 HM_H,     HM_J,     HM_K,     HM_L,     HM_SCLN,  KC_P,
               KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,                                 KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,
                                             KC_ESC,   TB_TAB,   TB_ENT,           TB_SPC,   TB_BSPC,  KC_DEL,
-                                                                KC_BTN3, KC_BTN1, PD_RCSCR,
+                                                                TD(TD_BTN3), KC_BTN1, TD(TD_BTN2),
                                                     //click   ,  right , down   , left   , up
                                                       ACC_TOG , KC_VOLU, SNP_TOG, KC_VOLD, DRG_TOG
     ),
@@ -105,7 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_Q,     CM_A,     CM_R,     CM_S,     CM_T,     CM_G,                                 CM_M,     CM_N,     CM_E,     CM_I,    CM_O,      KC_SCLN, 
               KC_Z,     KC_X,     KC_C,     KC_D,     KC_V,                                 KC_K,     KC_H,     KC_COMM,  KC_DOT,  KC_SLASH,
                                             KC_ESC,   TB_TAB,   TB_ENT,           TB_SPC,   TB_BSPC,  KC_DEL,
-                                                                KC_BTN3, KC_BTN1, PD_RCSCR,
+                                                                TD(TD_BTN3), KC_BTN1, TD(TD_BTN2),
                                                     //click   ,  right , down   , left   , up
                                                       ACC_TOG , KC_VOLU, SNP_TOG, KC_VOLD, DRG_TOG
     ),
@@ -214,22 +270,37 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 set_single_persistent_default_layer(_QWERTY);
             }
             return false;
-        case LT(0, KC_BTN2):
-            if (!record->tap.count && record->event.pressed) {
-                // Intercept hold function to send DRAGSCROLL_MODE_TOGGLE
-                if (mab_get_pointer_sniping_enabled()) {
-                  mab_set_pointer_sniping_enabled(false);
-                  #ifdef QUANTUM_PAINTER_ENABLE
-                    sniping_set_user(false);
-                  #endif
-                }
-                mab_set_pointer_dragscroll_enabled(!mab_get_pointer_dragscroll_enabled());
-                #ifdef QUANTUM_PAINTER_ENABLE
-                  dragscroll_set_user(mab_get_pointer_dragscroll_enabled());
-                #endif
-                return false;
+        case KC_BTN1:
+            // reset drag or sniping mode
+            if (mab_get_pointer_dragscroll_enabled()) {
+              mab_set_pointer_dragscroll_enabled(false);
+              #ifdef QUANTUM_PAINTER_ENABLE
+                dragscroll_set_user(false);
+              #endif
             }
-            return true; 
+            if (mab_get_pointer_sniping_enabled()) {
+              mab_set_pointer_sniping_enabled(false);
+              #ifdef QUANTUM_PAINTER_ENABLE
+                sniping_set_user(false);
+              #endif
+            }
+            return true;
+        // case LT(0, KC_BTN2):
+        //     if (!record->tap.count && record->event.pressed) {
+        //         // Intercept hold function to send DRAGSCROLL_MODE_TOGGLE
+        //         if (mab_get_pointer_sniping_enabled()) {
+        //           mab_set_pointer_sniping_enabled(false);
+        //           #ifdef QUANTUM_PAINTER_ENABLE
+        //             sniping_set_user(false);
+        //           #endif
+        //         }
+        //         mab_set_pointer_dragscroll_enabled(!mab_get_pointer_dragscroll_enabled());
+        //         #ifdef QUANTUM_PAINTER_ENABLE
+        //           dragscroll_set_user(mab_get_pointer_dragscroll_enabled());
+        //         #endif
+        //         return false;
+        //     }
+        //     return true; 
         default:
             return true;
     }
