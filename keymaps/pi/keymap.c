@@ -91,6 +91,10 @@ enum {
 };
 
 void handle_tap_BTN2(tap_dance_state_t *state, void *user_data) {
+    if (state->pressed) {
+      register_code(KC_BTN2);
+      return;
+    }
     switch (state->count) {
         case 1:
             tap_code16(KC_BTN2);
@@ -125,7 +129,15 @@ void handle_tap_BTN2(tap_dance_state_t *state, void *user_data) {
     }
 }
 
+void reset_BTN2(tap_dance_state_t *state, void *user_data) {
+    unregister_code(KC_BTN2);
+}
+
 void handle_tap_BTN3(tap_dance_state_t *state, void *user_data) {
+    if (state->pressed) {
+      register_code(KC_BTN3);
+      return;
+    }
     switch (state->count) {
         case 1:
             tap_code16(KC_BTN3);
@@ -138,9 +150,13 @@ void handle_tap_BTN3(tap_dance_state_t *state, void *user_data) {
     }
 }
 
+void reset_BTN3(tap_dance_state_t *state, void *user_data) {
+    unregister_code(KC_BTN3);
+}
+
 tap_dance_action_t tap_dance_actions[] = {
-    [TD_BTN2] = ACTION_TAP_DANCE_FN(handle_tap_BTN2),
-    [TD_BTN3] = ACTION_TAP_DANCE_FN(handle_tap_BTN3),
+    [TD_BTN2] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, handle_tap_BTN2, reset_BTN2),
+    [TD_BTN3] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, handle_tap_BTN3, reset_BTN3),
 };
 
 // KEYMAPS 
